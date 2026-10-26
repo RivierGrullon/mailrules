@@ -5,31 +5,60 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=22.12" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
-      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     },
     "./core": {
-      "import": { "types": "./dist/esm/core.d.ts", "default": "./dist/esm/core.js" },
-      "require": { "types": "./dist/cjs/core.d.ts", "default": "./dist/cjs/core.js" }
+      "import": {
+        "types": "./dist/esm/core.d.ts",
+        "default": "./dist/esm/core.js"
+      },
+      "require": {
+        "types": "./dist/cjs/core.d.ts",
+        "default": "./dist/cjs/core.js"
+      }
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "src", "README.md", "LICENSE", "CHANGELOG.md"],
-  "keywords": ["email", "validation", "typescript", "disposable-email", "blocklist", "allowlist"],
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "email",
+    "validation",
+    "typescript",
+    "disposable-email",
+    "blocklist",
+    "allowlist"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:package": "npm run build && node scripts/check-package.mjs",
-    "check": "npm run typecheck && npm test && npm run test:package",
+    "check": "npm run format:check && npm run typecheck && npm test && npm run test:package",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/releasing.md\" \".github/**/*.yml\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/releasing.md\" \".github/**/*.yml\" \".prettierrc.json\""
   },
   "dependencies": {
     "fakeout": "^1.0.128",
@@ -39,8 +68,11 @@
     "@types/node": "^22.20.5",
     "@types/validator": "^13.15.10",
     "esbuild": "^0.25.12",
+    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

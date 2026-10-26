@@ -6,4 +6,10 @@ export function createEmailValidator(options?: EmailValidatorOptions): EmailVali
   return createValidator(options);
 }
 
-export type { EmailRules, EmailValidationReason, EmailValidationResult, EmailValidator, EmailValidatorOptions } from './types.js';
+export type {
+  EmailRules,
+  EmailValidationReason,
+  EmailValidationResult,
+  EmailValidator,
+  EmailValidatorOptions,
+} from './types.js';

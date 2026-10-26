@@ -1,10 +1,11 @@
 import emailModule from 'validator/lib/isEmail.js';
 import fqdnModule from 'validator/lib/isFQDN.js';
 
-// These CommonJS subpaths export the function both directly and as `.default`.
-// The explicit property also matches their NodeNext declaration-file shape.
-const isEmail = emailModule.default;
-const isFQDN = fqdnModule.default;
+// Upstream exports callable CommonJS functions, but its subpath declarations
+// appear as namespaces under NodeNext. Keep the correction at this boundary;
+// the public signatures come from upstream's correctly typed root declaration.
+const isEmail = emailModule as unknown as typeof import('validator').isEmail;
+const isFQDN = fqdnModule as unknown as typeof import('validator').isFQDN;
 
 const controls = /[\u0000-\u001f\u007f-\u009f]/u;
 const urlSyntax = /[\s/@:\\?#%\[\]]/u;
@@ -24,10 +25,16 @@ export function normalizeDomain(input: unknown): string | null {
     return null;
   }
 
-  if (ascii.length > 253 || !isFQDN(ascii, {
-    require_tld: true, allow_numeric_tld: false,
-    allow_trailing_dot: false, allow_underscores: false,
-  })) return null;
+  if (
+    ascii.length > 253 ||
+    !isFQDN(ascii, {
+      require_tld: true,
+      allow_numeric_tld: false,
+      allow_trailing_dot: false,
+      allow_underscores: false,
+    })
+  )
+    return null;
   return ascii;
 }
 
@@ -45,9 +52,15 @@ export function parseEmail(input: unknown): { email: string; domain: string } | 
   const domain = normalizeDomain(rawDomain);
   if (domain === null) return null;
   const email = `${local}@${domain}`;
-  if (!isEmail(email, {
-    allow_utf8_local_part: false, allow_display_name: false,
-    allow_ip_domain: false, require_tld: true, ignore_max_length: false,
-  })) return null;
+  if (
+    !isEmail(email, {
+      allow_utf8_local_part: false,
+      allow_display_name: false,
+      allow_ip_domain: false,
+      require_tld: true,
+      ignore_max_length: false,
+    })
+  )
+    return null;
   return { email, domain };
 }

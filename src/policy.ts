@@ -2,12 +2,20 @@ import { normalizeDomain, parseEmail } from './normalize.js';
 import type { EmailValidationResult, EmailValidator, EmailValidatorOptions } from './types.js';
 
 const optionNames = new Set([
-  'disposableDomains', 'allowDisposable', 'blocklist', 'allowlist',
-  'allowlistMode', 'includeSubdomains',
+  'disposableDomains',
+  'allowDisposable',
+  'blocklist',
+  'allowlist',
+  'allowlistMode',
+  'includeSubdomains',
 ]);
 const ruleNames = new Set(['domains', 'emails']);
 
-function record(value: unknown, names: ReadonlySet<string>, label: string): Record<string, unknown> {
+function record(
+  value: unknown,
+  names: ReadonlySet<string>,
+  label: string,
+): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError(`${label} must be an object`);
   }
@@ -24,11 +32,16 @@ function booleanOption(value: unknown, fallback: boolean, label: string): boolea
 }
 
 function snapshot(
-  value: unknown, normalize: (input: unknown) => string | null, label: string,
+  value: unknown,
+  normalize: (input: unknown) => string | null,
+  label: string,
 ): ReadonlySet<string> {
   if (value === undefined) return new Set();
-  if (value === null || typeof value === 'string' ||
-      typeof (value as Iterable<unknown>)[Symbol.iterator] !== 'function') {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof (value as Iterable<unknown>)[Symbol.iterator] !== 'function'
+  ) {
     throw new TypeError(`${label} must be an iterable of strings`);
   }
   const result = new Set<string>();
@@ -62,12 +75,13 @@ function matchesDomain(domain: string, list: ReadonlySet<string>, descendants: b
 
 /** Internal factory; the root entry supplies its default dataset lazily. */
 export function createValidator(
-  options: EmailValidatorOptions = {}, defaultDomains: () => Iterable<string> = () => [],
+  options: EmailValidatorOptions = {},
+  defaultDomains: () => Iterable<string> = () => [],
 ): EmailValidator {
   const config = record(options, optionNames, 'validator');
   const allowDisposable = booleanOption(config.allowDisposable, false, 'allowDisposable');
   const includeSubdomains = booleanOption(config.includeSubdomains, true, 'includeSubdomains');
-  const mode = config.allowlistMode ?? 'exceptions';
+  const mode = config.allowlistMode === undefined ? 'exceptions' : config.allowlistMode;
   if (mode !== 'exceptions' && mode !== 'only') {
     throw new TypeError('allowlistMode must be exceptions or only');
   }
@@ -75,22 +89,29 @@ export function createValidator(
   const allowed = rules(config.allowlist, 'allowlist');
   const disposableDomains = snapshot(
     config.disposableDomains === undefined ? defaultDomains() : config.disposableDomains,
-    normalizeDomain, 'disposableDomains',
+    normalizeDomain,
+    'disposableDomains',
   );
 
   return Object.freeze({
     check(input: unknown): EmailValidationResult {
       const parsed = parseEmail(input);
-      if (!parsed) return {
-        valid: false, email: null, domain: null, disposable: null, reasons: ['invalid_format'],
-      };
+      if (!parsed)
+        return {
+          valid: false,
+          email: null,
+          domain: null,
+          disposable: null,
+          reasons: ['invalid_format'],
+        };
       const { email, domain } = parsed;
       const disposable = matchesDomain(domain, disposableDomains, includeSubdomains);
       const details = { email, domain, disposable };
       if (blocked.emails.has(email) || matchesDomain(domain, blocked.domains, includeSubdomains)) {
         return { ...details, valid: false, reasons: ['blocked'] };
       }
-      const isAllowed = allowed.emails.has(email) || matchesDomain(domain, allowed.domains, includeSubdomains);
+      const isAllowed =
+        allowed.emails.has(email) || matchesDomain(domain, allowed.domains, includeSubdomains);
       if (mode === 'only' && !isAllowed) {
         return { ...details, valid: false, reasons: ['not_allowed'] };
       }

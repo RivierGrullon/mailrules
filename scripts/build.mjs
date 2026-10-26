@@ -1,0 +1,25 @@
+import { rm, mkdir, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const require = createRequire(import.meta.url);
+const tsc = require.resolve('typescript/bin/tsc');
+
+await rm(new URL('../dist/', import.meta.url), { recursive: true, force: true });
+for (const format of ['esm', 'cjs']) {
+  execFileSync(process.execPath, [tsc, '-p', `tsconfig.${format}.json`], {
+    cwd: root,
+    stdio: 'inherit',
+  });
+  const directory = new URL(`../dist/${format}/`, import.meta.url);
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    new URL('package.json', directory),
+    JSON.stringify({
+      type: format === 'esm' ? 'module' : 'commonjs',
+    }) + '\n',
+  );
+}
+console.log('Built ESM and CommonJS with declarations and source maps.');
