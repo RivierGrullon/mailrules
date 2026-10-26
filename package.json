@@ -79,10 +79,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rivierpvolve/mailrules.git"
+    "url": "git+https://github.com/RivierGrullon/mailrules.git"
   },
-  "homepage": "https://github.com/rivierpvolve/mailrules#readme",
+  "homepage": "https://github.com/RivierGrullon/mailrules#readme",
   "bugs": {
-    "url": "https://github.com/rivierpvolve/mailrules/issues"
+    "url": "https://github.com/RivierGrullon/mailrules/issues"
   }
 }
