@@ -76,5 +76,13 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rivierpvolve/mailrules.git"
+  },
+  "homepage": "https://github.com/rivierpvolve/mailrules#readme",
+  "bugs": {
+    "url": "https://github.com/rivierpvolve/mailrules/issues"
   }
 }
