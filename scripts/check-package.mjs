@@ -15,6 +15,10 @@ const artifacts = join(root, 'artifacts');
 await mkdir(artifacts, { recursive: true });
 
 function npm(args, cwd) {
+  // A parent `npm publish --dry-run` exports npm_config_dry_run. The local
+  // pack/install checks must still create their artifacts and temporary consumer.
+  // This helper is only used for those two commands; it never publishes anything.
+  args = [...args, '--dry-run=false'];
   // npm supplies its actual JS CLI path to scripts, including on Windows.
   const cli = process.env.npm_execpath;
   return cli
@@ -35,6 +39,8 @@ for (const path of [
   'README.md',
   'LICENSE',
   'CHANGELOG.md',
+  'CONTRIBUTING.md',
+  'docs/releasing.md',
   'dist/esm/index.js',
   'dist/cjs/index.js',
   'dist/esm/core.js',
@@ -49,7 +55,9 @@ for (const path of [
 }
 for (const path of paths) {
   assert(
-    /^(dist\/|src\/|package\.json$|README\.md$|LICENSE$|CHANGELOG\.md$)/u.test(path),
+    /^(dist\/|src\/|package\.json$|README\.md$|LICENSE$|CHANGELOG\.md$|CONTRIBUTING\.md$|docs\/releasing\.md$)/u.test(
+      path,
+    ),
     `Unexpected package file: ${path}`,
   );
 }

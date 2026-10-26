@@ -39,7 +39,9 @@
     "src",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs/releasing.md"
   ],
   "keywords": [
     "email",
