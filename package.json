@@ -1,0 +1,46 @@
+{
+  "name": "mailrules",
+  "version": "0.1.0",
+  "description": "Configurable email validation for TypeScript and JavaScript: disposable detection, blocklists and allowlists.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=22.12" },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
+    "./core": {
+      "import": { "types": "./dist/esm/core.d.ts", "default": "./dist/esm/core.js" },
+      "require": { "types": "./dist/cjs/core.d.ts", "default": "./dist/cjs/core.js" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "src", "README.md", "LICENSE", "CHANGELOG.md"],
+  "keywords": ["email", "validation", "typescript", "disposable-email", "blocklist", "allowlist"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:package": "npm run build && node scripts/check-package.mjs",
+    "check": "npm run typecheck && npm test && npm run test:package",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
+  },
+  "dependencies": {
+    "fakeout": "^1.0.128",
+    "validator": "^13.15.35"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/validator": "^13.15.10",
+    "esbuild": "^0.25.12",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  },
+  "publishConfig": { "access": "public" }
+}
