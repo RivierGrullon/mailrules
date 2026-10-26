@@ -40,4 +40,4 @@ jobs:
       - run: npm ci
       - run: npm run check
       - name: Publish the verified tarball with provenance
-        run: npm publish artifacts/mailrules-*.tgz --access public --provenance --ignore-scripts
+        run: npm publish ./artifacts/mailrules-*.tgz --access public --provenance --ignore-scripts
