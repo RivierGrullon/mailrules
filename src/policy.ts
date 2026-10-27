@@ -1,6 +1,10 @@
 import { normalizeDomain, parseEmail } from './normalize.js';
+import { record, snapshot } from './config.js';
+import { customRules, evaluateCustomRules } from './custom-rules.js';
 import type {
+  EmailCustomRuleEvaluation,
   EmailListMatch,
+  EmailRuleMatch,
   EmailValidationResult,
   EmailValidator,
   EmailValidatorOptions,
@@ -13,49 +17,14 @@ const optionNames = new Set([
   'allowlist',
   'allowlistMode',
   'includeSubdomains',
+  'customRules',
 ]);
 const ruleNames = new Set(['domains', 'emails']);
-
-function record(
-  value: unknown,
-  names: ReadonlySet<string>,
-  label: string,
-): Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object`);
-  }
-  for (const name of Object.keys(value)) {
-    if (!names.has(name)) throw new TypeError(`Unknown ${label} option: ${name}`);
-  }
-  return value as Record<string, unknown>;
-}
 
 function booleanOption(value: unknown, fallback: boolean, label: string): boolean {
   if (value === undefined) return fallback;
   if (typeof value !== 'boolean') throw new TypeError(`${label} must be a boolean`);
   return value;
-}
-
-function snapshot(
-  value: unknown,
-  normalize: (input: unknown) => string | null,
-  label: string,
-): ReadonlySet<string> {
-  if (value === undefined) return new Set();
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof (value as Iterable<unknown>)[Symbol.iterator] !== 'function'
-  ) {
-    throw new TypeError(`${label} must be an iterable of strings`);
-  }
-  const result = new Set<string>();
-  for (const entry of value as Iterable<unknown>) {
-    const normalized = normalize(entry);
-    if (normalized === null) throw new TypeError(`${label} contains an invalid entry`);
-    result.add(normalized);
-  }
-  return result;
 }
 
 function rules(value: unknown, label: string) {
@@ -111,6 +80,7 @@ export function createValidator(
   }
   const blocked = rules(config.blocklist, 'blocklist');
   const allowed = rules(config.allowlist, 'allowlist');
+  const callbacks = customRules(config.customRules);
   const disposableDomains = snapshot(
     config.disposableDomains === undefined ? defaultDomains() : config.disposableDomains,
     normalizeDomain,
@@ -119,7 +89,8 @@ export function createValidator(
 
   function evaluate(input: unknown): {
     result: EmailValidationResult;
-    matchedRule: EmailListMatch | null;
+    matchedRule: EmailRuleMatch | null;
+    evaluations?: readonly EmailCustomRuleEvaluation[];
   } {
     const parsed = parseEmail(input);
     if (!parsed)
@@ -159,7 +130,26 @@ export function createValidator(
         },
       };
     }
-    return { result: { ...details, valid: true, reasons: [] }, matchedRule: allowMatch };
+    const custom = evaluateCustomRules(callbacks, details);
+    const warnings = custom.warnings.length ? { warnings: custom.warnings } : {};
+    if (custom.rejection) {
+      return {
+        result: {
+          ...details,
+          ...warnings,
+          valid: false,
+          reasons: ['custom_rule'],
+          customError: custom.rejection,
+        },
+        matchedRule: { source: 'customRules', type: 'custom', id: custom.rejection.ruleId },
+        evaluations: custom.evaluations,
+      };
+    }
+    return {
+      result: { ...details, ...warnings, valid: true, reasons: [] },
+      matchedRule: allowMatch,
+      evaluations: custom.evaluations,
+    };
   }
 
   return Object.freeze({
@@ -167,8 +157,13 @@ export function createValidator(
       return evaluate(input).result;
     },
     explain(input: unknown) {
-      const { result, matchedRule } = evaluate(input);
-      return { ...result, reason: result.reasons[0] ?? null, matchedRule, customRules: [] };
+      const { result, matchedRule, evaluations } = evaluate(input);
+      return {
+        ...result,
+        reason: result.reasons[0] ?? null,
+        matchedRule,
+        customRules: evaluations ?? [],
+      };
     },
   });
 }

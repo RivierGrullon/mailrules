@@ -7,7 +7,12 @@ export function createEmailValidator(options?: EmailValidatorOptions): EmailVali
 }
 
 export type {
+  EmailCustomRule,
+  EmailCustomRuleContext,
+  EmailCustomRuleEvaluation,
+  EmailCustomRuleResult,
   EmailListMatch,
+  EmailRuleIssue,
   EmailRuleMatch,
   EmailRules,
   EmailValidationExplanation,
