@@ -21,6 +21,12 @@ export interface EmailValidatorOptions {
   readonly includeSubdomains?: boolean;
   /** Synchronous application rules, evaluated in order after built-in checks pass. */
   readonly customRules?: Iterable<EmailCustomRule>;
+  /** Opt-in advisory typo suggestions. True uses built-in targets; an object replaces them. */
+  readonly suggestions?: boolean | EmailSuggestionOptions;
+}
+
+export interface EmailSuggestionOptions {
+  readonly domains: Iterable<string>;
 }
 
 export interface EmailCustomRuleContext {
@@ -78,6 +84,8 @@ type EmailValidationOutcome =
     };
 
 export type EmailValidationResult = EmailValidationOutcome & {
+  /** Advisory address suggestion; never replaces email or changes the validation decision. */
+  readonly suggestion?: string;
   /** Present only when custom rules produced warnings. Warnings do not reject an address. */
   readonly warnings?: readonly EmailRuleIssue[];
 };

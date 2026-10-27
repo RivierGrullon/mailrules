@@ -15,6 +15,7 @@ export type {
   EmailRuleIssue,
   EmailRuleMatch,
   EmailRules,
+  EmailSuggestionOptions,
   EmailValidationExplanation,
   EmailValidationReason,
   EmailValidationResult,

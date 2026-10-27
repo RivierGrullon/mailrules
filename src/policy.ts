@@ -1,6 +1,7 @@
 import { normalizeDomain, parseEmail } from './normalize.js';
 import { record, snapshot } from './config.js';
 import { customRules, evaluateCustomRules } from './custom-rules.js';
+import { createSuggester } from './suggestions.js';
 import type {
   EmailCustomRuleEvaluation,
   EmailListMatch,
@@ -18,6 +19,7 @@ const optionNames = new Set([
   'allowlistMode',
   'includeSubdomains',
   'customRules',
+  'suggestions',
 ]);
 const ruleNames = new Set(['domains', 'emails']);
 
@@ -81,6 +83,7 @@ export function createValidator(
   const blocked = rules(config.blocklist, 'blocklist');
   const allowed = rules(config.allowlist, 'allowlist');
   const callbacks = customRules(config.customRules);
+  const suggest = createSuggester(config.suggestions);
   const disposableDomains = snapshot(
     config.disposableDomains === undefined ? defaultDomains() : config.disposableDomains,
     normalizeDomain,
@@ -107,7 +110,13 @@ export function createValidator(
     const { email, domain } = parsed;
     const disposableMatch = matchingDomain(domain, disposableDomains, includeSubdomains);
     const disposable = disposableMatch !== null;
-    const details = { email, domain, disposable };
+    const suggestion = suggest(email, domain);
+    const details = {
+      email,
+      domain,
+      disposable,
+      ...(suggestion === undefined ? {} : { suggestion }),
+    };
     const blockMatch = listMatch(email, domain, blocked, 'blocklist', includeSubdomains);
     if (blockMatch) {
       return {
@@ -130,7 +139,7 @@ export function createValidator(
         },
       };
     }
-    const custom = evaluateCustomRules(callbacks, details);
+    const custom = evaluateCustomRules(callbacks, { email, domain, disposable });
     const warnings = custom.warnings.length ? { warnings: custom.warnings } : {};
     if (custom.rejection) {
       return {
