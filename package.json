@@ -125,5 +125,8 @@
     "zod": {
       "optional": true
     }
+  },
+  "bin": {
+    "mailrules": "./dist/esm/cli.js"
   }
 }

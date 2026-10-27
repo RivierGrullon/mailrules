@@ -43,6 +43,9 @@ for (const path of [
   'CONTRIBUTING.md',
   'docs/email-validation-javascript.md',
   'docs/releasing.md',
+  'dist/esm/cli.js',
+  'dist/esm/schema.js',
+  'dist/esm/zod.js',
   'dist/esm/index.js',
   'dist/cjs/index.js',
   'dist/esm/core.js',
@@ -75,6 +78,19 @@ try {
     consumer,
   );
 
+  const cliOutput = execFileSync(
+    process.execPath,
+    [join(consumer, 'node_modules/mailrules/dist/esm/cli.js')],
+    {
+      cwd: consumer,
+      input: 'email\nuser@example.com\nbad\n',
+      encoding: 'utf8',
+    },
+  );
+  assert(
+    cliOutput.includes('invalid_format') && cliOutput.includes('user@example.com'),
+    'Installed CLI validates CSV',
+  );
   const behavior = `
     assert.equal(createEmailValidator().check('user@mailinator.com').valid, false);
     assert.equal(createCore().check('user@mailinator.com').valid, true);

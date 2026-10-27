@@ -1,4 +1,4 @@
-import { rm, mkdir, writeFile } from 'node:fs/promises';
+import { rm, mkdir, writeFile, chmod } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -22,4 +22,5 @@ for (const format of ['esm', 'cjs']) {
     }) + '\n',
   );
 }
+await chmod(new URL('../dist/esm/cli.js', import.meta.url), 0o755);
 console.log('Built ESM and CommonJS with declarations and source maps.');
