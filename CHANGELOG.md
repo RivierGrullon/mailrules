@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - Opt-in domain typo suggestions using a small built-in vocabulary or caller-owned targets. Suggestions preserve the original email and validation decision, and omit ambiguous matches.
 - `explain()` reports the decisive normalized rule, subdomain matching, rejection reason and outcomes of custom callbacks.

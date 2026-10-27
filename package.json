@@ -1,6 +1,6 @@
 {
   "name": "mailrules",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Configurable email validation for TypeScript and JavaScript: disposable detection, blocklists and allowlists.",
   "license": "MIT",
   "type": "module",

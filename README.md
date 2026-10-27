@@ -13,7 +13,7 @@ npm install mailrules
 ```
 
 For an unpublished local checkout, run `npm run test:package` and install
-`./artifacts/mailrules-0.1.0.tgz` in your application instead.
+`./artifacts/mailrules-0.2.0.tgz` in your application instead.
 
 ## Quick start
 
