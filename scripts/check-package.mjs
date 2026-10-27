@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { existsSync } from 'node:fs';
 import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -243,6 +244,35 @@ try {
     console.log(
       `Browser bundle ${entry}: ${built.outputFiles[0].contents.length} bytes (unminified).`,
     );
+  }
+
+  assert(!existsSync(join(consumer, 'node_modules/zod')), 'Ordinary installs must not require Zod');
+  assert(
+    !existsSync(join(consumer, 'node_modules/react')),
+    'Ordinary installs must not require React',
+  );
+  npm(['install', '--ignore-scripts', '--no-audit', '--no-fund', 'zod@^4'], consumer);
+  for (const [extension, imports] of [
+    [
+      'mjs',
+      "import { emailSchema } from 'mailrules/schema'; import { zodEmail } from 'mailrules/zod'; import { createEmailValidator } from 'mailrules';",
+    ],
+    [
+      'cjs',
+      "const { emailSchema } = require('mailrules/schema'); const { zodEmail } = require('mailrules/zod'); const { createEmailValidator } = require('mailrules');",
+    ],
+  ]) {
+    await writeFile(
+      join(consumer, `adapters.${extension}`),
+      imports +
+        `
+      const v = createEmailValidator();
+      if (emailSchema(v)['~standard'].validate(' User@EXAMPLE.COM ').value !== 'User@example.com') throw new Error('Standard Schema output');
+      if (zodEmail(v).parse(' User@EXAMPLE.COM ') !== 'User@example.com') throw new Error('Zod output');
+      if (zodEmail(v).safeParse('bad').success) throw new Error('Zod rejection');
+    `,
+    );
+    execFileSync(process.execPath, [`adapters.${extension}`], { cwd: consumer, stdio: 'inherit' });
   }
 
   console.log(

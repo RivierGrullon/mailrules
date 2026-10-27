@@ -32,7 +32,27 @@
         "default": "./dist/cjs/core.js"
       }
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./schema": {
+      "import": {
+        "types": "./dist/esm/schema.d.ts",
+        "default": "./dist/esm/schema.js"
+      },
+      "require": {
+        "types": "./dist/cjs/schema.d.ts",
+        "default": "./dist/cjs/schema.js"
+      }
+    },
+    "./zod": {
+      "import": {
+        "types": "./dist/esm/zod.d.ts",
+        "default": "./dist/esm/zod.js"
+      },
+      "require": {
+        "types": "./dist/cjs/zod.d.ts",
+        "default": "./dist/cjs/zod.js"
+      }
+    }
   },
   "files": [
     "dist",
@@ -78,12 +98,14 @@
     "validator": "^13.15.35"
   },
   "devDependencies": {
+    "@standard-schema/spec": "^1.1.0",
     "@types/node": "^22.20.5",
     "@types/validator": "^13.15.10",
     "esbuild": "^0.25.12",
     "prettier": "^3.9.10",
     "tsx": "^4.23.15",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "zod": "^4.6.7"
   },
   "publishConfig": {
     "access": "public"
@@ -95,5 +117,13 @@
   "homepage": "https://github.com/RivierGrullon/mailrules#readme",
   "bugs": {
     "url": "https://github.com/RivierGrullon/mailrules/issues"
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   }
 }
