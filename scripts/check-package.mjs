@@ -80,6 +80,33 @@ try {
     assert.equal(createEmailValidator({ blocklist: { domains: ['bücher.de'] } })
       .check('user@xn--bcher-kva.de').reasons[0], 'blocked');
     assert.equal(createCore({ allowlistMode: 'only' }).check('user@example.com').reasons[0], 'not_allowed');
+    for (const factory of [createEmailValidator, createCore]) {
+      const validator = factory({
+        suggestions: true,
+        disposableDomains: [],
+        blocklist: { domains: ['blocked.example'] },
+        customRules: [
+          { id: 'notice', check: () => ({ status: 'warning', code: 'review' }) },
+          { id: 'personal', check: ({ email }) => email.startsWith('support@')
+            ? { status: 'rejected', code: 'role_mailbox' } : { status: 'accepted' } },
+        ],
+      });
+      const suggested = validator.check('User@gmial.com');
+      assert.equal(suggested.suggestion, 'User@gmail.com');
+      assert.equal(suggested.email, 'User@gmial.com');
+      assert.equal(suggested.valid, true);
+      assert.equal(suggested.warnings[0].code, 'review');
+      assert.equal(validator.explain('user@sub.blocked.example').matchedRule.value, 'blocked.example');
+      const rejected = validator.explain('support@example.com');
+      assert.equal(rejected.reason, 'custom_rule');
+      assert.equal(rejected.customError.ruleId, 'personal');
+      assert.equal(rejected.customRules[0].status, 'warning');
+      assert.equal(rejected.customRules[1].status, 'rejected');
+      const disposableTypo = factory({ suggestions: true, disposableDomains: ['gmial.com'] }).check('User@gmial.com');
+      assert.equal(disposableTypo.valid, false);
+      assert.equal(disposableTypo.reasons[0], 'disposable');
+      assert.equal(disposableTypo.suggestion, 'User@gmail.com');
+    }
   `;
   const esm = `import assert from 'node:assert/strict';
     import { createEmailValidator } from 'mailrules';
@@ -111,6 +138,38 @@ try {
     createEmailValidator({ allowlistMode: 'anything' });
     // @ts-expect-error domain entries must be strings
     createCore({ blocklist: { domains: [42] } });
+    const rule: import('mailrules').EmailCustomRule = {
+      id: 'policy', check: (context: import('mailrules').EmailCustomRuleContext): import('mailrules').EmailCustomRuleResult => {
+        const domain: string = context.domain;
+        // @ts-expect-error rule input is readonly
+        context.email = 'overwrite@example.com';
+        return domain === 'example.com' ? { status: 'warning', code: 'review' } : { status: 'accepted' };
+      },
+    };
+    const coreRule: import('mailrules/core').EmailCustomRule = rule;
+    const suggestionOptions: import('mailrules').EmailSuggestionOptions = { domains: ['company.example'] };
+    const coreSuggestions: import('mailrules/core').EmailSuggestionOptions = suggestionOptions;
+    const enhanced = createCore({ suggestions: coreSuggestions, customRules: [coreRule] });
+    const explained: import('mailrules').EmailValidationExplanation = enhanced.explain('user@example.com');
+    const coreExplanation: import('mailrules/core').EmailValidationExplanation = explained;
+    const match: import('mailrules').EmailRuleMatch | null = coreExplanation.matchedRule;
+    if (match?.type === 'custom') { const id: string = match.id; }
+    else if (match) { const listMatch: import('mailrules/core').EmailListMatch = match; const value: string = listMatch.value; }
+    const issue: import('mailrules').EmailRuleIssue | undefined = explained.customError;
+    const evaluations: readonly import('mailrules/core').EmailCustomRuleEvaluation[] = explained.customRules;
+    const suggestion: string | undefined = explained.suggestion;
+    const warnings: readonly import('mailrules/core').EmailRuleIssue[] | undefined = explained.warnings;
+    if (explained.valid) { const email: string = explained.email; const noError: undefined = explained.customError; }
+    // @ts-expect-error custom rules must be synchronous
+    createEmailValidator({ customRules: [{ id: 'async', check: async () => ({ status: 'accepted' }) }] });
+    // @ts-expect-error rejected custom rules require a code
+    createCore({ customRules: [{ id: 'invalid', check: () => ({ status: 'rejected' }) }] });
+    // @ts-expect-error unknown rule status
+    createCore({ customRules: [{ id: 'invalid', check: () => ({ status: 'approve' }) }] });
+    // @ts-expect-error custom suggestion targets must be an iterable of strings
+    createEmailValidator({ suggestions: { domains: [42] } });
+    // @ts-expect-error a custom suggestion object requires targets
+    createEmailValidator({ suggestions: {} });
   `;
   for (const extension of ['mts', 'cts'])
     await writeFile(join(consumer, `types.${extension}`), typed);
@@ -164,6 +223,16 @@ try {
     const validator = context.Mailrules.createEmailValidator();
     assert.equal(validator.check('user@mailinator.com').valid, entry === 'mailrules/core');
     assert.equal(validator.check('user@bücher.de').domain, 'xn--bcher-kva.de');
+    const enhanced = context.Mailrules.createEmailValidator({
+      suggestions: true,
+      blocklist: { domains: ['blocked.example'] },
+      customRules: [{ id: 'browser-policy', check: () => ({ status: 'warning', code: 'notice' }) }],
+    });
+    assert.equal(enhanced.check('User@gmial.com').suggestion, 'User@gmail.com');
+    assert.equal(enhanced.check('User@gmial.com').email, 'User@gmial.com');
+    assert.equal(enhanced.check('user@example.com').warnings[0].ruleId, 'browser-policy');
+    assert.equal(enhanced.explain('user@sub.blocked.example').matchedRule.matchedSubdomain, true);
+    assert.equal(enhanced.explain('user@example.com').customRules[0].status, 'warning');
     if (entry === 'mailrules/core') {
       assert(
         !Object.keys(built.metafile.inputs).some((path) => path.includes('/fakeout/')),
