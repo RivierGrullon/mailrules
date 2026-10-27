@@ -4,6 +4,27 @@ import { createEmailValidator } from '../src/core.js';
 import type { EmailCustomRule, EmailCustomRuleResult, EmailValidatorOptions } from '../src/core.js';
 
 describe('custom policy rules', () => {
+  it('keeps captured callback receivers from rewriting the rule snapshot', () => {
+    let receiver: unknown;
+    const definition: EmailCustomRule = {
+      id: 'original',
+      check() {
+        receiver = this;
+        return { status: 'rejected', code: 'policy_rejection' };
+      },
+    };
+    const validator = createEmailValidator({ customRules: [definition] });
+    assert.equal(validator.check('user@example.com').valid, false);
+    assert.notEqual(receiver, definition);
+    // Reflect.set avoids relying on strict/sloppy-mode assignment exceptions.
+    Reflect.set(receiver as object, 'id', 'changed');
+    Reflect.set(receiver as object, 'check', () => ({ status: 'accepted' }));
+    const result = validator.explain('user@example.com');
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.customError, { ruleId: 'original', code: 'policy_rejection' });
+    assert.deepEqual(result.matchedRule, { source: 'customRules', type: 'custom', id: 'original' });
+  });
+
   it('rejects using caller-defined logic with a stable code and explanation', () => {
     const validator = createEmailValidator({
       customRules: [

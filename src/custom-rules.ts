@@ -23,7 +23,7 @@ export function customRules(value: unknown): readonly EmailCustomRule[] {
     if (typeof check !== 'function')
       throw new TypeError(`Custom rule ${id} must have a check function`);
     ids.add(id);
-    rules.push({ id, check: check as EmailCustomRule['check'] });
+    rules.push(Object.freeze({ id, check: check as EmailCustomRule['check'] }));
   }
   return rules;
 }
