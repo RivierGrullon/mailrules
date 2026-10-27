@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /mailrules/
+Sitemap: https://riviergrullon.github.io/mailrules/sitemap.xml

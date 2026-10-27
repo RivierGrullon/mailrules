@@ -9,6 +9,8 @@ domain typo corrections without changing user input. Validation runs locally,
 with no API key or network requests. Supports ESM, CommonJS, Node.js >=22.12,
 and modern browser bundlers.
 
+[Live playground](https://riviergrullon.github.io/mailrules/) ·
+[Zod, React and CSV guide](https://github.com/RivierGrullon/mailrules/blob/main/docs/integrations.md) ·
 [npm package](https://www.npmjs.com/package/mailrules) ·
 [JavaScript email validation tutorial](https://github.com/RivierGrullon/mailrules/blob/main/docs/email-validation-javascript.md) ·
 [Changelog](https://github.com/RivierGrullon/mailrules/blob/main/CHANGELOG.md)
@@ -23,7 +25,7 @@ npm install mailrules
 ```
 
 For an unpublished local checkout, run `npm run test:package` and install
-`./artifacts/mailrules-0.2.1.tgz` in your application instead.
+`./artifacts/mailrules-0.3.0.tgz` in your application instead.
 
 ## Validate an email address in JavaScript or TypeScript
 
@@ -66,6 +68,26 @@ const { createEmailValidator } = require('mailrules');
 const validator = createEmailValidator();
 ```
 
+## Integrations and CSV reports
+
+Use `zodEmail(validator)` from `mailrules/zod` in Zod 4 object schemas and React
+Hook Form's `zodResolver`. `emailSchema(validator)` from `mailrules/schema` supports
+Standard Schema v1 without Zod. Both return normalized strings and preserve
+non-blocking warnings as successful validation. See the
+[integration guide](https://github.com/RivierGrullon/mailrules/blob/main/docs/integrations.md)
+for complete examples and custom messages.
+
+```sh
+npx mailrules --input contacts.csv --status rejected --output rejected.csv
+```
+
+The CLI accepts an `email` column and reports each address's decision and reason.
+Use `--config rules.json` for your policy. Run `npx mailrules --help` for delimiters,
+column selection, exit codes and limits. Existing files are never overwritten.
+
+The playground and its React, font, build and testing dependencies are **excluded
+from the npm package**. Zod is an optional peer, only required by `mailrules/zod`.
+
 ## Configuration
 
 | Option              | Default                | Meaning                                                                                                                              |
@@ -76,6 +98,8 @@ const validator = createEmailValidator();
 | `allowlist`         | `{}`                   | Same shape as `blocklist`. A match can exempt an address from disposable rejection.                                                  |
 | `allowlistMode`     | `'exceptions'`         | `'exceptions'` permits other unblocked addresses; `'only'` requires an allowlist match.                                              |
 | `includeSubdomains` | `true`                 | Domain rules in all three lists also match descendants. Email rules always match exact addresses.                                    |
+| `roleAccounts`      | Disabled               | `'allow'`, `'warn'`, `'block'`, or `{ action, names? }` for shared role names.                                                       |
+| `freeProviders`     | Disabled               | `'allow'`, `'warn'`, `'block'`, or `{ action, domains? }` for exact provider domains.                                                |
 | `suggestions`       | `false`                | `true` enables built-in typo targets; `{ domains: Iterable<string> }` replaces those targets. Suggestions never change the decision. |
 | `customRules`       | `[]`                   | Iterable of `{ id, check }` callbacks, evaluated in order after built-in checks pass.                                                |
 
@@ -83,6 +107,53 @@ Arrays, sets and generators are accepted. Lists are copied at creation; modifyin
 your original options or lists does not modify an existing validator. Construct a
 new validator to change policy. Malformed entries, wrong option types and unknown
 option names throw `TypeError` during construction.
+
+### Role addresses and free email providers
+
+```ts
+const validator = createEmailValidator({
+  roleAccounts: 'warn',
+  freeProviders: 'block',
+});
+validator.check('support@example.com').warnings?.[0]?.code; // 'role_account'
+validator.check('jane@gmail.com').reasons; // ['free_provider']
+```
+
+Both options are off by default. Choose `'allow'` to classify without changing
+acceptance, `'warn'` to add a non-blocking warning, or `'block'` to reject matches.
+When enabled, results include `roleAccount` and/or `freeProvider`: boolean for
+parsed addresses, `null` for invalid syntax. Disabled fields are absent.
+
+Role names are matched case-insensitively after unquoting the local part and
+removing a plus tag: `Support+news@example.com` matches `support`, while
+`supporting@example.com` does not. This classification does not rewrite the address.
+The curated vocabulary includes admin, administrator, billing, contact, help,
+hello, info, marketing, noreply, no-reply, office, postmaster, sales, security,
+support, team and webmaster.
+
+Free-provider classification matches exact canonical domains, even when
+`includeSubdomains` is enabled. The curated list includes gmail.com, googlemail.com,
+outlook.com, hotmail.com, live.com, msn.com, yahoo.com, ymail.com, rocketmail.com,
+aol.com, icloud.com, me.com, mac.com, proton.me, protonmail.com, pm.me, gmx.com,
+gmx.net, mail.com, yandex.com, yandex.ru and zoho.com. It is not exhaustive and
+may include providers with paid plans. **A non-match does not mean an address is
+corporate, trustworthy, or deliverable.** The lists update only with package releases.
+
+Replace either list with your own iterable (an empty list matches nothing):
+
+```ts
+createEmailValidator({
+  roleAccounts: { action: 'warn', names: ['support', 'sales'] },
+  freeProviders: { action: 'block', domains: ['gmail.com', 'outlook.com'] },
+});
+```
+
+Classification checks run after disposable rejection and before custom callbacks.
+An allowlist only exempts disposable rejection; it does not bypass classification
+blocks. Role warnings precede provider warnings, followed by custom warnings.
+`explain()` identifies the matching name/domain using source `roleAccounts` or
+`freeProviders`. Role matches have type `localPart`; provider matches have type
+`domain`, with `matchedSubdomain: false` in both cases.
 
 ### Email allowlist: accept only specified domains or mailboxes
 
@@ -250,7 +321,7 @@ must be unique, nonempty strings. A rule returns exactly one of:
 
 Codes must be nonempty strings, and messages must be strings when supplied. All
 built-in checks run first: custom acceptance cannot override invalid syntax,
-blocklists, strict allowlist misses or disposable rejection. Allowlist exceptions
+blocklists, strict allowlist misses, disposable or classification rejection. Allowlist exceptions
 and `allowDisposable` still proceed through custom rules. Warnings encountered
 before a custom rejection remain in the result.
 
@@ -265,16 +336,16 @@ once, so calling both methods evaluates twice. Use pure callbacks for repeatable
 
 `check(input: unknown)` returns `EmailValidationResult` with these fields:
 
-| Field         | Meaning                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------- |
-| `valid`       | Whether the address passes syntax and your configured policy.                           |
-| `email`       | Normalized email; `null` for invalid format.                                            |
-| `domain`      | Lowercase ASCII domain; `null` for invalid format.                                      |
-| `disposable`  | Whether this dataset classifies the domain as disposable; `null` for invalid format.    |
-| `reasons`     | Empty when accepted, otherwise a single stable rejection code.                          |
-| `suggestion`  | Optional advisory alternative address. The original `email` and decision are unchanged. |
-| `warnings`    | Optional ordered `{ ruleId, code, message? }[]` from custom rules. Absent when empty.   |
-| `customError` | `{ ruleId, code, message? }` on custom rejection; otherwise absent.                     |
+| Field         | Meaning                                                                                                   |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| `valid`       | Whether the address passes syntax and your configured policy.                                             |
+| `email`       | Normalized email; `null` for invalid format.                                                              |
+| `domain`      | Lowercase ASCII domain; `null` for invalid format.                                                        |
+| `disposable`  | Whether this dataset classifies the domain as disposable; `null` for invalid format.                      |
+| `reasons`     | Empty when accepted, otherwise a single stable rejection code.                                            |
+| `suggestion`  | Optional advisory alternative address. The original `email` and decision are unchanged.                   |
+| `warnings`    | Optional ordered `{ ruleId, code, message? }[]` from classifications and custom rules. Absent when empty. |
+| `customError` | `{ ruleId, code, message? }` on custom rejection; otherwise absent.                                       |
 
 Decisions run in this order and stop at the first rejection:
 
@@ -282,8 +353,10 @@ Decisions run in this order and stop at the first rejection:
 2. **`blocked`** — explicit domain or mailbox block. This overrides every allow option.
 3. **`not_allowed`** — `'only'` mode with no allowlist match.
 4. **`disposable`** — known disposable domain, with neither an allowlist exception nor `allowDisposable: true`.
-5. **`custom_rule`** — the first custom rule returning `rejected`. Earlier custom warnings are retained.
-6. Otherwise accepted, potentially with custom warnings.
+5. **`role_account`** — a role-name match when `roleAccounts` uses `'block'`.
+6. **`free_provider`** — a provider-domain match when `freeProviders` uses `'block'`.
+7. **`custom_rule`** — the first custom rule returning `rejected`. Earlier warnings are retained.
+8. Otherwise accepted, potentially with warnings.
 
 A permitted disposable email retains `disposable: true`. A value of `false` means
 the domain was not found in the configured dataset, not proof it is permanent.
@@ -292,7 +365,8 @@ Types are exported from both entries: `EmailRules`, `EmailValidatorOptions`,
 `EmailValidator`, `EmailValidationReason`, `EmailValidationResult`,
 `EmailValidationExplanation`, `EmailListMatch`, `EmailRuleMatch`,
 `EmailSuggestionOptions`, `EmailCustomRule`, `EmailCustomRuleContext`,
-`EmailCustomRuleResult`, `EmailCustomRuleEvaluation`, and `EmailRuleIssue`. The result
+`EmailCustomRuleResult`, `EmailCustomRuleEvaluation`, `EmailRuleIssue`,
+`EmailClassificationAction`, `EmailRoleAccountOptions`, and `EmailFreeProviderOptions`. The result
 is a discriminated union: when `result.valid` is true, `email` and `domain` are strings.
 
 ## Normalization and scope
@@ -308,8 +382,8 @@ is a discriminated union: when `result.valid` is true, `email` and `domain` are 
   (SMTPUTF8), display names, IP literals, single-label domains and trailing dots are rejected.
 - Normalized addresses are limited to 254 characters and local parts to 64 bytes.
   Raw input is limited to 1,024 UTF-16 code units before parsing.
-- Free providers such as Gmail are allowed. Free-provider classification is outside
-  this release; opt-in suggestions are independent of provider classification.
+- Free providers such as Gmail are allowed by default. Opt-in provider policies
+  and domain typo suggestions are independent features.
 
 This is syntax and policy validation. It performs no DNS, MX, SMTP or mailbox
 ownership checks. A confirmation email is needed to establish mailbox ownership.

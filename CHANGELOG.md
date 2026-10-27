@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Optional Zod 4 and Standard Schema v1 adapters with normalized string outputs and field errors. React Hook Form integration guide and live example.
+- Opt-in role address and free-provider classification: allow, warn or block, with replaceable vocabularies, explanation matches and optional result fields. New `role_account` and `free_provider` reason codes; exhaustive consumers should add them. Default decisions and result shapes are unchanged.
+- CSV command with stdin/file input, JSON configuration, accepted/rejected filtering, spreadsheet-safe exports and explicit exit codes.
+- Public playground with editable policies, live explanations, suggestions and copyable JavaScript/React snippets. Frontend dependencies and assets are excluded from the npm package.
+
 ## 0.2.1
 
 - Clearer JavaScript and TypeScript email validation description and npm search keywords.

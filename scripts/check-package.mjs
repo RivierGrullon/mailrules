@@ -42,6 +42,7 @@ for (const path of [
   'CHANGELOG.md',
   'CONTRIBUTING.md',
   'docs/email-validation-javascript.md',
+  'docs/integrations.md',
   'docs/releasing.md',
   'dist/esm/cli.js',
   'dist/esm/schema.js',
@@ -60,7 +61,7 @@ for (const path of [
 }
 for (const path of paths) {
   assert(
-    /^(dist\/|src\/|package\.json$|README\.md$|LICENSE$|CHANGELOG\.md$|CONTRIBUTING\.md$|docs\/(?:releasing|email-validation-javascript)\.md$)/u.test(
+    /^(dist\/|src\/|package\.json$|README\.md$|LICENSE$|CHANGELOG\.md$|CONTRIBUTING\.md$|docs\/(?:releasing|email-validation-javascript|integrations)\.md$)/u.test(
       path,
     ),
     `Unexpected package file: ${path}`,
