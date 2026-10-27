@@ -1,5 +1,10 @@
 import { normalizeDomain, parseEmail } from './normalize.js';
-import type { EmailValidationResult, EmailValidator, EmailValidatorOptions } from './types.js';
+import type {
+  EmailListMatch,
+  EmailValidationResult,
+  EmailValidator,
+  EmailValidatorOptions,
+} from './types.js';
 
 const optionNames = new Set([
   'disposableDomains',
@@ -61,16 +66,35 @@ function rules(value: unknown, label: string) {
   };
 }
 
-function matchesDomain(domain: string, list: ReadonlySet<string>, descendants: boolean): boolean {
-  if (list.has(domain)) return true;
-  if (!descendants) return false;
+function matchingDomain(
+  domain: string,
+  list: ReadonlySet<string>,
+  descendants: boolean,
+): string | null {
+  if (list.has(domain)) return domain;
+  if (!descendants) return null;
   // Start at complete labels; example.com must never match notexample.com.
   let dot = domain.indexOf('.');
   while (dot !== -1) {
-    if (list.has(domain.slice(dot + 1))) return true;
+    if (list.has(domain.slice(dot + 1))) return domain.slice(dot + 1);
     dot = domain.indexOf('.', dot + 1);
   }
-  return false;
+  return null;
+}
+
+function listMatch(
+  email: string,
+  domain: string,
+  list: ReturnType<typeof rules>,
+  source: 'blocklist' | 'allowlist',
+  descendants: boolean,
+): EmailListMatch | null {
+  if (list.emails.has(email))
+    return { source, type: 'email', value: email, matchedSubdomain: false };
+  const value = matchingDomain(domain, list.domains, descendants);
+  return value === null
+    ? null
+    : { source, type: 'domain', value, matchedSubdomain: value !== domain };
 }
 
 /** Internal factory; the root entry supplies its default dataset lazily. */
@@ -93,32 +117,58 @@ export function createValidator(
     'disposableDomains',
   );
 
-  return Object.freeze({
-    check(input: unknown): EmailValidationResult {
-      const parsed = parseEmail(input);
-      if (!parsed)
-        return {
+  function evaluate(input: unknown): {
+    result: EmailValidationResult;
+    matchedRule: EmailListMatch | null;
+  } {
+    const parsed = parseEmail(input);
+    if (!parsed)
+      return {
+        result: {
           valid: false,
           email: null,
           domain: null,
           disposable: null,
           reasons: ['invalid_format'],
-        };
-      const { email, domain } = parsed;
-      const disposable = matchesDomain(domain, disposableDomains, includeSubdomains);
-      const details = { email, domain, disposable };
-      if (blocked.emails.has(email) || matchesDomain(domain, blocked.domains, includeSubdomains)) {
-        return { ...details, valid: false, reasons: ['blocked'] };
-      }
-      const isAllowed =
-        allowed.emails.has(email) || matchesDomain(domain, allowed.domains, includeSubdomains);
-      if (mode === 'only' && !isAllowed) {
-        return { ...details, valid: false, reasons: ['not_allowed'] };
-      }
-      if (disposable && !allowDisposable && !isAllowed) {
-        return { ...details, valid: false, reasons: ['disposable'] };
-      }
-      return { ...details, valid: true, reasons: [] };
+        },
+        matchedRule: null,
+      };
+    const { email, domain } = parsed;
+    const disposableMatch = matchingDomain(domain, disposableDomains, includeSubdomains);
+    const disposable = disposableMatch !== null;
+    const details = { email, domain, disposable };
+    const blockMatch = listMatch(email, domain, blocked, 'blocklist', includeSubdomains);
+    if (blockMatch) {
+      return {
+        result: { ...details, valid: false, reasons: ['blocked'] },
+        matchedRule: blockMatch,
+      };
+    }
+    const allowMatch = listMatch(email, domain, allowed, 'allowlist', includeSubdomains);
+    if (mode === 'only' && !allowMatch) {
+      return { result: { ...details, valid: false, reasons: ['not_allowed'] }, matchedRule: null };
+    }
+    if (disposableMatch !== null && !allowDisposable && !allowMatch) {
+      return {
+        result: { ...details, valid: false, reasons: ['disposable'] },
+        matchedRule: {
+          source: 'disposableDomains',
+          type: 'domain',
+          value: disposableMatch,
+          matchedSubdomain: disposableMatch !== domain,
+        },
+      };
+    }
+    return { result: { ...details, valid: true, reasons: [] }, matchedRule: allowMatch };
+  }
+
+  return Object.freeze({
+    check(input: unknown): EmailValidationResult {
+      return evaluate(input).result;
+    },
+    explain(input: unknown) {
+      const { result, matchedRule } = evaluate(input);
+      return { ...result, reason: result.reasons[0] ?? null, matchedRule, customRules: [] };
     },
   });
 }

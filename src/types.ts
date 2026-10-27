@@ -40,7 +40,25 @@ export type EmailValidationResult =
       readonly reasons: readonly ['invalid_format'];
     };
 
+/** Normalized list entry responsible for a policy decision. */
+export interface EmailListMatch {
+  readonly source: 'blocklist' | 'allowlist' | 'disposableDomains';
+  readonly type: 'email' | 'domain';
+  readonly value: string;
+  readonly matchedSubdomain: boolean;
+}
+
+export type EmailRuleMatch = EmailListMatch;
+
+export type EmailValidationExplanation = EmailValidationResult & {
+  readonly reason: EmailValidationReason | null;
+  readonly matchedRule: EmailRuleMatch | null;
+  readonly customRules: readonly never[];
+};
+
 export interface EmailValidator {
   /** Validate an untrusted value without network requests. */
   check(input: unknown): EmailValidationResult;
+  /** Evaluate once and identify the rule that decided the result. */
+  explain(input: unknown): EmailValidationExplanation;
 }

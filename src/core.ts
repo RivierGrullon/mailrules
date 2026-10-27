@@ -7,7 +7,10 @@ export function createEmailValidator(options?: EmailValidatorOptions): EmailVali
 }
 
 export type {
+  EmailListMatch,
+  EmailRuleMatch,
   EmailRules,
+  EmailValidationExplanation,
   EmailValidationReason,
   EmailValidationResult,
   EmailValidator,
