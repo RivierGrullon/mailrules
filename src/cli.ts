@@ -18,6 +18,8 @@ Validate CSV email addresses locally. Omit --input or use - to read stdin.
 
 Reports are comma-delimited UTF-8 CSV, with formula-leading cells escaped.
 Existing output files are never overwritten. Maximum input size: 20 MiB.
+Limits: 100000 data rows, 256 columns, 1000000 total cells, 262144 raw
+UTF-16 code units per field (excluding outer quotes).
 Exit codes: 0 success; 1 rejected rows with --fail-on-rejected; 2 input/error.
 No DNS, SMTP or mailbox ownership checks are performed.
 `;

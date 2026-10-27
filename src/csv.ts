@@ -1,61 +1,72 @@
-/** Parse delimited text with RFC 4180 quoting. Blank physical lines are skipped. */
+/** Parse delimited text with RFC 4180 quoting and bounded structure. */
 export function parseCsv(text: string, delimiter = ','): string[][] {
   if (![',', ';', '\t'].includes(delimiter)) throw new TypeError('Unsupported CSV delimiter');
   if (text.startsWith('\uFEFF')) text = text.slice(1);
   const rows: string[][] = [];
   let row: string[] = [];
-  let field = '';
+  let start = 0;
   let quoted = false;
   let closed = false;
+  let decoded = '';
   let used = false;
-  const finishField = () => {
-    row.push(field);
-    field = '';
+  let cells = 0;
+  const finishField = (end: number) => {
+    if (row.length >= 256) throw new Error('CSV column limit exceeded (256)');
+    if (cells >= 1000000) throw new Error('CSV cell limit exceeded (1000000)');
+    const value = closed ? decoded : text.slice(start, end);
+    if (value.length > 262144)
+      throw new Error('CSV field limit exceeded (262144 UTF-16 code units)');
+    row.push(value);
+    cells++;
+    decoded = '';
     closed = false;
   };
-  const finishRow = () => {
-    if (used || row.length || field) {
-      finishField();
+  const finishRow = (end: number) => {
+    if (used || row.length || end > start) {
+      if (rows.length >= 100001)
+        throw new Error('CSV record limit exceeded (100000 data rows plus header)');
+      finishField(end);
       rows.push(row);
     }
     row = [];
-    field = '';
     used = false;
     closed = false;
+    decoded = '';
   };
   for (let i = 0; i < text.length; i++) {
     const char = text[i]!;
+    if (!closed && i - start > 262144)
+      throw new Error('CSV field limit exceeded (262144 UTF-16 code units)');
     if (quoted) {
       if (char === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else {
+        if (text[i + 1] === '"') i++;
+        else {
+          decoded = text.slice(start, i).replaceAll('""', '"');
           quoted = false;
           closed = true;
         }
-      } else field += char;
+      }
       continue;
     }
     if (closed && char !== delimiter && char !== '\r' && char !== '\n')
       throw new Error('Invalid CSV: text after closing quote');
     if (char === delimiter) {
-      finishField();
+      finishField(i);
+      start = i + 1;
       used = true;
     } else if (char === '\r' || char === '\n') {
-      finishRow();
+      finishRow(i);
       if (char === '\r' && text[i + 1] === '\n') i++;
+      start = i + 1;
     } else if (char === '"') {
-      if (field.length || closed) throw new Error('Invalid CSV: quote inside unquoted field');
+      if (i !== start || closed) throw new Error('Invalid CSV: quote inside unquoted field');
       quoted = true;
       used = true;
-    } else {
-      field += char;
-      used = true;
-    }
+      start = i + 1;
+    } else used = true;
   }
   if (quoted) throw new Error('Invalid CSV: unclosed quoted field');
-  finishRow();
+  finishRow(text.length);
   return rows;
 }
 

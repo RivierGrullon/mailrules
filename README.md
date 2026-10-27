@@ -151,7 +151,7 @@ createEmailValidator({
 Classification checks run after disposable rejection and before custom callbacks.
 An allowlist only exempts disposable rejection; it does not bypass classification
 blocks. Role warnings precede provider warnings, followed by custom warnings.
-`explain()` identifies the matching name/domain using source `roleAccounts` or
+`explain()` identifies the matching name/domain for a classification rejection, using source `roleAccounts` or
 `freeProviders`. Role matches have type `localPart`; provider matches have type
 `domain`, with `matchedSubdomain: false` in both cases.
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -89,4 +89,28 @@ describe('CSV CLI', () => {
     assert.equal(r.status, 2);
     assert.match(r.stderr, /20 MiB/);
   });
+});
+
+it('rejects a small file with excessive records under a constrained heap', () => {
+  const r = spawnSync(process.execPath, ['--max-old-space-size=256', '--import', 'tsx', cli], {
+    input: 'email\n' + 'x\n'.repeat(1000000),
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+  });
+  assert.equal(r.status, 2, r.stderr);
+  assert.equal(r.stdout, '');
+  assert.match(r.stderr, /record limit/i);
+});
+
+it('does not create an output file when a structural limit is exceeded', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mailrules-cli-limit-'));
+  try {
+    const output = join(dir, 'report.csv');
+    const r = run(['--output', output], 'email\n' + 'x\n'.repeat(100001));
+    assert.equal(r.status, 2);
+    assert.equal(r.stdout, '');
+    assert.equal(existsSync(output), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

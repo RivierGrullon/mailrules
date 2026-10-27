@@ -154,8 +154,12 @@ cat contacts.csv | npx mailrules --status rejected
   supported, including quoted multiline fields and doubled quote escapes.
 - Blank physical rows are skipped. Duplicate/empty headers, missing columns,
   malformed quotes and inconsistent record lengths are errors.
-- Input is limited to 20 MiB and config to 1 MiB. Processing is in memory; split
-  larger files before use. The command does not stream arbitrarily large lists.
+- Input is limited to 20 MiB and config to 1 MiB. Parsing also limits each file
+  to 100,000 data records plus its header, 256 columns and 1,000,000 total cells
+  (including headers). Each raw field content is limited to 262,144 UTF-16 code
+  units, excluding outer quotes but including doubled quote escapes. Limits are
+  enforced while parsing, before building a report. Processing is in memory;
+  split larger files before use. The command does not stream arbitrarily large lists.
 - Reports use comma-separated CSV with CRLF endings. To prevent spreadsheet
   formula evaluation, risky cell values are prefixed with an apostrophe. This
   includes email local parts starting with `+`, `-`, `=` or `@`; the validation
