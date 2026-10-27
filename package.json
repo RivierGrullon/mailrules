@@ -1,7 +1,7 @@
 {
   "name": "mailrules",
-  "version": "0.2.0",
-  "description": "Configurable email validation for TypeScript and JavaScript: disposable detection, blocklists and allowlists.",
+  "version": "0.2.1",
+  "description": "JavaScript and TypeScript email validation: disposable email detection, blocklists, allowlists, custom rules and domain typo suggestions.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -41,15 +41,26 @@
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
+    "docs/email-validation-javascript.md",
     "docs/releasing.md"
   ],
   "keywords": [
     "email",
     "validation",
+    "javascript",
     "typescript",
+    "nodejs",
+    "email-validation",
+    "email-validator",
     "disposable-email",
+    "disposable-email-domains",
+    "temporary-email",
     "blocklist",
-    "allowlist"
+    "allowlist",
+    "whitelist",
+    "blacklist",
+    "email-typo",
+    "form-validation"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -59,8 +70,8 @@
     "check": "npm run format:check && npm run typecheck && npm test && npm run test:package",
     "prepack": "npm run build",
     "prepublishOnly": "npm run check",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/releasing.md\" \".github/**/*.yml\" \".prettierrc.json\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/releasing.md\" \".github/**/*.yml\" \".prettierrc.json\""
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/{releasing,email-validation-javascript}.md\" \".github/**/*.yml\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"*.json\" \"*.md\" \"docs/{releasing,email-validation-javascript}.md\" \".github/**/*.yml\" \".prettierrc.json\""
   },
   "dependencies": {
     "fakeout": "^1.0.128",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Clearer JavaScript and TypeScript email validation description and npm search keywords.
+- Practical signup validation tutorial and README answers about disposable emails, allowlists, browser usage and mailbox verification.
+- Documentation and package metadata only; runtime behavior is unchanged.
+
 ## 0.2.0
 
 - Opt-in domain typo suggestions using a small built-in vocabulary or caller-owned targets. Suggestions preserve the original email and validation decision, and omit ambiguous matches.

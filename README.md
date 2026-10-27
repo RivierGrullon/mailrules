@@ -1,10 +1,20 @@
-# mailrules
+# mailrules — Email validation for JavaScript and TypeScript
 
-Configurable email validation for TypeScript and JavaScript.
+**mailrules is a JavaScript and TypeScript email validation library** for Node.js
+and browser applications. Check email syntax, block disposable email addresses,
+and configure domain or mailbox blocklists and allowlists with one synchronous API.
 
-Validate format, reject disposable providers, and apply your own domain and mailbox
-blocklists and allowlists. Synchronous, local, and compatible with ESM, CommonJS,
-Node.js >=22.12, and modern browser bundlers.
+Add custom validation rules, explain why an address was rejected, and suggest
+domain typo corrections without changing user input. Validation runs locally,
+with no API key or network requests. Supports ESM, CommonJS, Node.js >=22.12,
+and modern browser bundlers.
+
+[npm package](https://www.npmjs.com/package/mailrules) ·
+[JavaScript email validation tutorial](https://github.com/RivierGrullon/mailrules/blob/main/docs/email-validation-javascript.md) ·
+[Changelog](https://github.com/RivierGrullon/mailrules/blob/main/CHANGELOG.md)
+
+Use it for signup forms, invitation policies and email import checks. It validates
+syntax and application rules; it does **not** verify that a mailbox exists.
 
 ## Install
 
@@ -13,9 +23,12 @@ npm install mailrules
 ```
 
 For an unpublished local checkout, run `npm run test:package` and install
-`./artifacts/mailrules-0.2.0.tgz` in your application instead.
+`./artifacts/mailrules-0.2.1.tgz` in your application instead.
 
-## Quick start
+## Validate an email address in JavaScript or TypeScript
+
+This example works in both JavaScript and TypeScript. Disposable email detection
+is enabled by default; blocklists and allowlists add your application's policy.
 
 ```ts
 import { createEmailValidator } from 'mailrules';
@@ -71,7 +84,7 @@ your original options or lists does not modify an existing validator. Construct 
 new validator to change policy. Malformed entries, wrong option types and unknown
 option names throw `TypeError` during construction.
 
-### Accept only specified domains or mailboxes
+### Email allowlist: accept only specified domains or mailboxes
 
 ```ts
 const teamOnly = createEmailValidator({
@@ -93,7 +106,7 @@ Set `includeSubdomains: false` to require exact domain matches. For example,
 `example.com` then matches `example.com` but not `sub.example.com`. With either
 setting it never matches `notexample.com` or `example.com.evil.test`.
 
-### Custom data and the lightweight core
+### Disposable email detection with custom data and the lightweight core
 
 The root entry includes [fakeout](https://github.com/Manas1820/fakeout) as its default
 provider. To manage data yourself and omit that dataset from your bundle:
@@ -313,6 +326,48 @@ caller-managed data. No network requests occur during construction or validation
 Consumers can use Dependabot/Renovate or update their installed dependency tree
 with `npm update`. This repository includes daily dependency checks. Review data
 changes because new classifications can change which signups are accepted.
+
+## Frequently asked questions
+
+### How do I check whether an email is valid in JavaScript?
+
+Create a validator with `createEmailValidator()` and call `validator.check(input)`.
+Read `result.valid` for the decision and `result.reasons` for a rejection code.
+By default, a valid result means the email passed syntax checks and is not in the
+bundled disposable-domain dataset. Configure lists and custom rules for your policy.
+
+### Can I block temporary or disposable email addresses?
+
+Yes. The default `mailrules` import checks domains against the dataset supplied by
+`fakeout`. It detects known disposable providers, not every temporary mailbox.
+Use an allowlist for exceptions or supply your own `disposableDomains` iterable.
+Update installed data regularly; checks do not fetch a live list.
+
+### Does mailrules support email whitelists and blacklists?
+
+Yes. The API calls them `allowlist` and `blocklist`. Both accept domains and exact
+email addresses. Use `allowlistMode: 'only'` to require a match. An explicit block
+takes priority over an allowlist entry, and subdomains match by default.
+
+### Why use this instead of an email validation regex?
+
+A regular expression can check an address's shape. It does not supply a maintained
+disposable-domain list or decide your application's exceptions. mailrules uses
+`validator.js` for syntax and adds configurable policies, typed rejection reasons,
+custom callbacks and optional typo suggestions.
+
+### Can I use it for React forms and Node.js backends?
+
+Yes. It is framework independent and works with modern browser bundlers and
+supported Node.js versions. Reuse a validator across submissions. For browser apps
+that manage their own domain data, `mailrules/core` omits the default dataset from
+the import graph. Always enforce signup rules on the server as well.
+
+### Does a valid email result mean the mailbox exists?
+
+No. mailrules makes no DNS, MX or SMTP requests and cannot prove deliverability
+or ownership. A confirmation email with a verification link is needed to establish
+that the person signing up controls the mailbox.
 
 ## Development
 
