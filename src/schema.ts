@@ -23,6 +23,8 @@ const messages: Record<EmailValidationReason, string> = {
   blocked: 'This email address is not accepted.',
   not_allowed: 'Use an approved email address.',
   disposable: 'Use an email address you can keep receiving messages at.',
+  role_account: 'Use a personal mailbox instead of a shared role address.',
+  free_provider: 'Use an email address outside the configured free-provider list.',
   custom_rule: 'This address does not meet the email requirements.',
 };
 

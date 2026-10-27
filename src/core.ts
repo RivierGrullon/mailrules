@@ -7,6 +7,9 @@ export function createEmailValidator(options?: EmailValidatorOptions): EmailVali
 }
 
 export type {
+  EmailClassificationAction,
+  EmailRoleAccountOptions,
+  EmailFreeProviderOptions,
   EmailCustomRule,
   EmailCustomRuleContext,
   EmailCustomRuleEvaluation,

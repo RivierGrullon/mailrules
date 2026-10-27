@@ -1,6 +1,12 @@
 /** Stable rejection codes, in decision order. */
 export type EmailValidationReason =
-  'invalid_format' | 'blocked' | 'not_allowed' | 'disposable' | 'custom_rule';
+  | 'invalid_format'
+  | 'blocked'
+  | 'not_allowed'
+  | 'disposable'
+  | 'role_account'
+  | 'free_provider'
+  | 'custom_rule';
 
 /** Domain rules inherit to subdomains by default; email rules are exact. */
 export interface EmailRules {
@@ -8,7 +14,21 @@ export interface EmailRules {
   readonly emails?: Iterable<string>;
 }
 
+export type EmailClassificationAction = 'allow' | 'warn' | 'block';
+export interface EmailRoleAccountOptions {
+  readonly action: EmailClassificationAction;
+  readonly names?: Iterable<string>;
+}
+export interface EmailFreeProviderOptions {
+  readonly action: EmailClassificationAction;
+  readonly domains?: Iterable<string>;
+}
+
 export interface EmailValidatorOptions {
+  /** Opt-in role classification. Caller-owned names replace the built-in vocabulary. */
+  readonly roleAccounts?: EmailClassificationAction | EmailRoleAccountOptions;
+  /** Opt-in exact-domain classification. A non-match does not imply a business address. */
+  readonly freeProviders?: EmailClassificationAction | EmailFreeProviderOptions;
   /** Replace the default dataset. An empty iterable disables disposable detection. */
   readonly disposableDomains?: Iterable<string>;
   /** Permit known disposable domains while still reporting their classification. Default: false. */
@@ -84,6 +104,10 @@ type EmailValidationOutcome =
     };
 
 export type EmailValidationResult = EmailValidationOutcome & {
+  /** Present only when role classification is enabled; null for invalid syntax. */
+  readonly roleAccount?: boolean | null;
+  /** Present only when free-provider classification is enabled; null for invalid syntax. */
+  readonly freeProvider?: boolean | null;
   /** Advisory address suggestion; never replaces email or changes the validation decision. */
   readonly suggestion?: string;
   /** Present only when custom rules produced warnings. Warnings do not reject an address. */
@@ -92,8 +116,9 @@ export type EmailValidationResult = EmailValidationOutcome & {
 
 /** Normalized list entry responsible for a policy decision. */
 export interface EmailListMatch {
-  readonly source: 'blocklist' | 'allowlist' | 'disposableDomains';
-  readonly type: 'email' | 'domain';
+  readonly source:
+    'blocklist' | 'allowlist' | 'disposableDomains' | 'roleAccounts' | 'freeProviders';
+  readonly type: 'email' | 'domain' | 'localPart';
   readonly value: string;
   readonly matchedSubdomain: boolean;
 }

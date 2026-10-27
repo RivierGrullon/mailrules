@@ -1,6 +1,7 @@
 import { normalizeDomain, parseEmail } from './normalize.js';
 import { record, snapshot } from './config.js';
 import { customRules, evaluateCustomRules } from './custom-rules.js';
+import { classifier, classificationWarning } from './classification.js';
 import { createSuggester } from './suggestions.js';
 import type {
   EmailCustomRuleEvaluation,
@@ -20,6 +21,8 @@ const optionNames = new Set([
   'includeSubdomains',
   'customRules',
   'suggestions',
+  'roleAccounts',
+  'freeProviders',
 ]);
 const ruleNames = new Set(['domains', 'emails']);
 
@@ -84,6 +87,8 @@ export function createValidator(
   const allowed = rules(config.allowlist, 'allowlist');
   const callbacks = customRules(config.customRules);
   const suggest = createSuggester(config.suggestions);
+  const roles = classifier(config.roleAccounts, 'roleAccounts');
+  const providers = classifier(config.freeProviders, 'freeProviders');
   const disposableDomains = snapshot(
     config.disposableDomains === undefined ? defaultDomains() : config.disposableDomains,
     normalizeDomain,
@@ -104,6 +109,8 @@ export function createValidator(
           domain: null,
           disposable: null,
           reasons: ['invalid_format'],
+          ...(roles ? { roleAccount: null } : {}),
+          ...(providers ? { freeProvider: null } : {}),
         },
         matchedRule: null,
       };
@@ -111,7 +118,11 @@ export function createValidator(
     const disposableMatch = matchingDomain(domain, disposableDomains, includeSubdomains);
     const disposable = disposableMatch !== null;
     const suggestion = suggest(email, domain);
+    const roleMatch = roles?.match(email, domain) ?? null;
+    const freeMatch = providers?.match(email, domain) ?? null;
     const details = {
+      ...(roles ? { roleAccount: roleMatch !== null } : {}),
+      ...(providers ? { freeProvider: freeMatch !== null } : {}),
       email,
       domain,
       disposable,
@@ -139,8 +150,31 @@ export function createValidator(
         },
       };
     }
+    const classificationWarnings = [];
+    for (const [classification, match, reason] of [
+      [roles, roleMatch, 'role_account'],
+      [providers, freeMatch, 'free_provider'],
+    ] as const) {
+      if (!classification || !match) continue;
+      if (classification.action === 'block') {
+        return {
+          result: {
+            ...details,
+            valid: false,
+            reasons: [reason],
+            ...(classificationWarnings.length ? { warnings: classificationWarnings } : {}),
+          },
+          matchedRule: match,
+        };
+      }
+      if (classification.action === 'warn')
+        classificationWarnings.push(
+          classificationWarning(reason === 'role_account' ? 'roleAccounts' : 'freeProviders'),
+        );
+    }
     const custom = evaluateCustomRules(callbacks, { email, domain, disposable });
-    const warnings = custom.warnings.length ? { warnings: custom.warnings } : {};
+    const allWarnings = [...classificationWarnings, ...custom.warnings];
+    const warnings = allWarnings.length ? { warnings: allWarnings } : {};
     if (custom.rejection) {
       return {
         result: {
