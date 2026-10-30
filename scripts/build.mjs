@@ -2,10 +2,11 @@ import { rm, mkdir, writeFile, chmod } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const require = createRequire(import.meta.url);
-const tsc = require.resolve('typescript/bin/tsc');
+const tsc = join(dirname(require.resolve('typescript/package.json')), 'bin/tsc');
 
 await rm(new URL('../dist/', import.meta.url), { recursive: true, force: true });
 for (const format of ['esm', 'cjs']) {

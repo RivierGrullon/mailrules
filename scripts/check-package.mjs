@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { existsSync } from 'node:fs';
@@ -192,7 +192,7 @@ try {
   `;
   for (const extension of ['mts', 'cts'])
     await writeFile(join(consumer, `types.${extension}`), typed);
-  const tsc = require.resolve('typescript/bin/tsc');
+  const tsc = join(dirname(require.resolve('typescript/package.json')), 'bin/tsc');
   const baseFlags = [
     '--strict',
     '--noEmit',
